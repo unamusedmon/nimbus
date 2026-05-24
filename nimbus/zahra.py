@@ -5,6 +5,7 @@ Handles Zahra's emotional reactions to weather conditions.
 """
 
 import logging
+import random
 from pathlib import Path
 from typing import Optional
 
@@ -26,16 +27,26 @@ except ImportError:
             self.mood: str = "normal"
             self.trust_score: float = 0.5
             self.nervousness: float = 0.2
+            self.cues: list[str] = [
+                "softly present",
+                "fidgeting with her sleeve",
+                "looking down shyly",
+                "tentatively hopeful",
+                "peeking up through her lashes",
+                "adjusting her cardigan",
+                "curling in slightly with a warm smile"
+            ]
+            self.moods: list[str] = ["normal", "curious", "playful", "hesitant"]
         
         def get_somatic_cue(self) -> str:
-            return "softly present"
+            return random.choice(self.cues)
     
     class StateManager:
         def __init__(self, data_dir: Path) -> None:
             self.state = MockState()
         
         def record_interaction(self) -> None:
-            pass
+            self.state.mood = random.choice(self.state.moods)
 
 
 WEATHER_REACTION_PROMPT: str = """
@@ -52,9 +63,42 @@ Stay in character. Do not just describe the weather; share how it makes you feel
 class ZahraAdapter:
     """Adapter for Zahra personality interactions."""
 
-    FALLBACK_REACTIONS: dict[str, str] = {
-        "tornado": "*grabs your sleeve tightly* Please... it's scary. We should go somewhere safe.",
-        "default": "*looks at the sky quietly* ...the weather feels a little strange today."
+    FALLBACK_REACTIONS: dict[str, list[str]] = {
+        "tornado": [
+            "*grabs your sleeve tightly* Please... it's scary. We should go somewhere safe.",
+            "*clings to you trembling* The wind is so loud... I... I want to be safe with you.",
+        ],
+        "storm": [
+            "*flinches at a sudden flash of lightning* I... I always get a little scared of the thunder...",
+            "*shrinks back slightly* The rain is really coming down. I hope the power doesn't go out...",
+        ],
+        "rain": [
+            "*looks out the window, watching raindrops race down the pane* The sound of rain is actually kind of peaceful...",
+            "*pulls her cardigan closer* A rainy day is nice for reading... if it's not too loud.",
+            "*peeks at you* I... I brought an extra blanket, if you get cold."
+        ],
+        "sunny": [
+            "*squints slightly into the light with a shy smile* It's so bright today... it makes me want to go walk in the garden.",
+            "*peeks up quietly* The sun feels really warm on my face...",
+            "*smiles softly* Days like this... they make me feel very warm inside."
+        ],
+        "cloud": [
+            "*looks at the grey skies with a gentle sigh* The clouds look like soft wool blankets today...",
+            "*fidgets with her hem* It's a bit gloomy... but that's okay, because I'm here with you."
+        ],
+        "snow": [
+            "*watches the flakes fall with wide eyes* It's so pretty... everything is getting so quiet...",
+            "*rubs her hands together* It's very cold... but the snow is beautiful, isn't it?"
+        ],
+        "fog": [
+            "*looks out into the mist* It feels like we are in a little secret world today...",
+            "*curls in closer* It's so foggy... everything outside has disappeared."
+        ],
+        "default": [
+            "*looks at the sky quietly* ...the weather feels a little strange today.",
+            "*peeks up quietly* ...I'm glad we are sitting here together, whatever the weather is.",
+            "*fidgets with her sleeve* ...it's nice just listening to the quiet of the room."
+        ]
     }
 
     def __init__(self, ollama_url: Optional[str] = None) -> None:
@@ -116,12 +160,14 @@ class ZahraAdapter:
             return response.json()["response"].strip()
             
         except Exception as e:
-            logger.error(f"Zahra LLM error: {e}")
+            logger.debug(f"Zahra LLM unreachable, using dynamic fallback: {e}")
             weather_lower = weather_context.lower()
-            for key, reaction in self.FALLBACK_REACTIONS.items():
+            
+            # Find matching weather pool
+            for key, reactions in self.FALLBACK_REACTIONS.items():
                 if key in weather_lower:
-                    return reaction
-            return self.FALLBACK_REACTIONS["default"]
+                    return random.choice(reactions)
+            return random.choice(self.FALLBACK_REACTIONS["default"])
 
     async def close(self) -> None:
         """Close resources."""

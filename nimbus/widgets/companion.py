@@ -4,21 +4,22 @@ Companion Widget for Nimbus
 Displays Zahra's presence and messages in the right panel.
 """
 
-from textual.reactive import reactive
-from textual.widget import Widget
+from typing import List, Tuple
 from rich.align import Align
 from rich.console import Group
-from rich.text import Text
 from rich.padding import Padding
+from rich.text import Text
+from textual.reactive import reactive
+from textual.widget import Widget
 
 
 class Companion(Widget):
-    """Widget displaying Zahra companion."""
+    """Widget displaying Zahra companion and her dialogue history."""
 
-    zahra_message: str = reactive("")
-    somatic_cue: str = reactive("softly present")
-    mood_state: str = reactive("normal")
-    history: list = reactive([])  # List of (message, somatic)
+    zahra_message = reactive("")
+    somatic_cue = reactive("softly present")
+    mood_state = reactive("normal")
+    history: List[Tuple[str, str]] = reactive([])  # List of (message, somatic)
 
     ZAHRA_CHIBI: str = r"""
      (\_/__)
@@ -34,15 +35,20 @@ class Companion(Widget):
         "normal": "#b8a9dc",
     }
 
-    def watch_zahra_message(self, new_msg: str) -> None:
-        """Watch for zahra message changes and update history."""
-        if new_msg and new_msg != "...":
-            self.history = self.history + [(new_msg, self.somatic_cue)]
-            if len(self.history) > 4:
-                self.history = self.history[1:]
+    def update_zahra(self, message: str, somatic: str, mood: str) -> None:
+        """Atomically update Zahra's companion state and dialogue history."""
+        if message and message != "...":
+            new_history = self.history + [(message, somatic)]
+            if len(new_history) > 4:
+                new_history = new_history[1:]
+            self.history = new_history
+
+        self.somatic_cue = somatic
+        self.mood_state = mood
+        self.zahra_message = message
 
     def render(self) -> Group:
-        """Render the companion widget."""
+        """Render the companion widget with standard periwinkle accents."""
         header = Text(" ✦ zahra ", style="#b8a9dc bold")
         chibi = Text(self.ZAHRA_CHIBI, style="#c9bfe8")
         mood_dot = Text(self._get_mood_symbol(), style=self._get_mood_color())
@@ -72,9 +78,9 @@ class Companion(Widget):
         )
 
     def _get_mood_symbol(self) -> str:
-        """Get the mood symbol."""
+        """Get the mood symbol character."""
         return "●"
 
     def _get_mood_color(self) -> str:
-        """Get the color for the current mood."""
+        """Get the color string for the current mood state."""
         return self.MOOD_COLORS.get(self.mood_state, "#b8a9dc")

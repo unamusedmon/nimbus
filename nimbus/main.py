@@ -6,11 +6,12 @@ A beautiful Textual TUI weather app with Zahra and Morg.
 
 import asyncio
 from datetime import datetime
+import logging
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
-from textual.widgets import Static
+from textual.containers import Container, Vertical
+from textual.widgets import Header, Footer, Static
 
 from nimbus.config import get_config
 from nimbus.weather import WeatherClient
@@ -21,6 +22,8 @@ from nimbus.theme import TCSS
 from nimbus.widgets.sky import Sky
 from nimbus.widgets.conditions import Conditions
 from nimbus.widgets.companion import Companion
+
+logger = logging.getLogger(__name__)
 
 
 class Nimbus(App):
@@ -36,7 +39,6 @@ class Nimbus(App):
     def __init__(self) -> None:
         """Initialize the Nimbus application."""
         super().__init__()
-        cfg = get_config()
         
         self.weather_client = WeatherClient()
         self.alert_monitor = AlertMonitor()
@@ -50,22 +52,23 @@ class Nimbus(App):
         self.simulated_alert: str | None = None
 
     def compose(self) -> ComposeResult:
-        """Compose the application UI."""
+        """Compose the application UI panels with native Header and Footer."""
+        yield Header(show_clock=True)
         yield Container(
             Vertical(Conditions(id="conditions"), id="left-panel"),
             Vertical(Sky(id="sky"), id="center-panel"),
             Vertical(Companion(id="companion"), id="right-panel"),
             id="main-container"
         )
-        yield Static(id="app-footer")
+        yield Footer()
 
     async def on_mount(self) -> None:
-        """Initialize the application on mount."""
+        """Initialize the application timers and trigger background load."""
         cfg = get_config()
         self.title = cfg.app.name
         self.sub_title = cfg.location.city
 
-        # Initial data fetch and personality updates in parallel
+        # Initial load in background task
         asyncio.create_task(self._initial_load())
 
         # Set up periodic updates
@@ -78,32 +81,29 @@ class Nimbus(App):
         )
 
     async def _initial_load(self) -> None:
-        """Background task for initial data load."""
+        """Background task for loading weather and alert data sequentially before greeting."""
+        # 1. Load atmospheric and alert data in parallel first
         await asyncio.gather(
             self.update_weather(),
-            self.update_alerts(),
-            self.personality_update("greeting")
+            self.update_alerts()
         )
+        # 2. Trigger the first personality update after data is loaded
+        await self.personality_update("greeting")
 
     def update_time(self) -> None:
-        """Update the time display and trigger sky re-render."""
-        self.query_one("#sky").mutate_reactive(Sky.is_day)
-        footer = self.query_one("#app-footer")
-        footer.update(
-            f"Last update: {self.last_update_str} | "
-            f"Polling: Active | {get_config().app.name} v{get_config().app.version}"
-        )
+        """Update the ticking clock display and trigger clean sky re-rendering."""
+        self.query_one("#sky").refresh()
 
     async def action_refresh_data(self) -> None:
-        """Force refresh all data."""
+        """Force refresh all real-time data."""
         await asyncio.gather(
             self.update_weather(),
-            self.update_alerts(),
-            self.personality_update("refresh")
+            self.update_alerts()
         )
+        await self.personality_update("refresh")
 
     async def action_simulate_tornado(self) -> None:
-        """Simulate a tornado warning for testing."""
+        """Simulate a tornado warning for warning UI verification."""
         self.simulated_alert = "Tornado"
         await self.update_alerts()
 
@@ -123,19 +123,24 @@ class Nimbus(App):
             pass
 
     async def action_safe_quit(self) -> None:
-        """Quit the application with a goodbye from Zahra."""
+        """Quit the application with a graceful goodbye from Zahra."""
         comp = self.query_one("#companion")
-        comp.zahra_message = " *looks up quietly* ...stay safe out there."
+        comp.update_zahra(
+            message="...stay safe out there.",
+            somatic="looks up quietly",
+            mood="normal"
+        )
         await asyncio.sleep(1.5)
-        
-        # Clean up resources
+        self.exit()
+
+    async def on_unmount(self) -> None:
+        """Native lifecycle cleanup method to prevent resource leaks."""
         await asyncio.gather(
             self.weather_client.close(),
             self.alert_monitor.close(),
             self.zahra.close(),
             self.morg.close()
         )
-        self.exit()
 
     async def update_weather(self) -> None:
         """Update weather data from NWS."""
@@ -155,10 +160,10 @@ class Nimbus(App):
 
             self.last_update_str = datetime.now().strftime("%H:%M")
 
-            # Check for significant weather changes
+            # Check for significant weather changes (3°F delta or desc change)
             if (
                 self.current_temp is None
-                or abs(self.current_temp - conditions.temp_f) > 3
+                or abs(self.current_temp - conditions.temp_f) > 3.0
                 or self.current_desc != conditions.description
             ):
                 self.current_temp = conditions.temp_f
@@ -203,7 +208,7 @@ class Nimbus(App):
         else:
             time_of_day = "night"
 
-        # Construct weather context for Zahra
+        # Construct weather context for companions
         alert_severity = self.simulated_alert or self.alert_monitor.get_highest_severity()
         alert_status = (
             f"Alert status: {alert_severity}." if alert_severity else "No active alerts."
@@ -221,12 +226,25 @@ class Nimbus(App):
         # Get Zahra's reaction
         zahra_text = await self.zahra.get_reaction(weather_context, time_of_day=time_of_day)
         comp = self.query_one("#companion")
-        comp.mood_state = str(self.zahra.manager.state.mood)
-        comp.somatic_cue = self.zahra.manager.state.get_somatic_cue()
-        comp.zahra_message = zahra_text
+        
+        # Read the real StateManager variables safely if they exist
+        somatic = "softly present"
+        mood = "normal"
+        if hasattr(self.zahra, "manager") and hasattr(self.zahra.manager, "state"):
+            state = self.zahra.manager.state
+            if hasattr(state, "get_somatic_cue"):
+                somatic = state.get_somatic_cue()
+            if hasattr(state, "mood"):
+                mood = str(state.mood)
+
+        comp.update_zahra(
+            message=zahra_text,
+            somatic=somatic,
+            mood=mood
+        )
 
     async def ambient_personality_update(self) -> None:
-        """Periodic ambient personality update."""
+        """Periodic ambient companion dialogue update."""
         await self.personality_update("ambient")
 
 

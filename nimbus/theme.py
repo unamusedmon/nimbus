@@ -172,13 +172,29 @@ Sky {
     text-style: italic;
 }
 
-/* App Footer */
-#app-footer {
-    dock: bottom;
-    height: 1;
-    background: #1a1b2e;
+/* Native Header and Footer Styling */
+Header {
+    background: #16213e;
+    color: #b8a9dc;
+    text-style: bold;
+}
+
+Header Clock {
+    color: #d4a853;
+}
+
+Footer {
+    background: #16213e;
     color: #9b97aa;
-    padding: 0 1;
+}
+
+Footer > .footer--key {
+    background: #1a1b2e;
+    color: #b8a9dc;
+}
+
+Footer > .footer--highlight {
+    color: #e8e4f0;
 }
 
 /* Alert States */

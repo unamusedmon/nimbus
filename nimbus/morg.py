@@ -5,6 +5,7 @@ Handles Morg's terse, Socratic commentary on weather conditions.
 """
 
 import logging
+import random
 from typing import Optional
 
 import httpx
@@ -38,9 +39,44 @@ Provide a short third-person weather commentary (1 sentence).
 class MorgAdapter:
     """Adapter for Morg personality commentary."""
 
-    FALLBACK_COMMENTARIES: dict[str, str] = {
-        "tornado": "Morg notes: Tornado Warning. Morg is not calm. Go.",
-        "default": "Morg notes the {weather_description}. Morg finds this unsurprising."
+    FALLBACK_COMMENTARIES: dict[str, list[str]] = {
+        "tornado": [
+            "Morg notes: Tornado Warning. Morg is not calm. Go.",
+            "Morg demands immediate subterranean relocation. The vortex approaches.",
+        ],
+        "storm": [
+            "Morg counts three seconds between light and thunder. The storm approaches.",
+            "Morg observes electrostatic charge rising. Goblins know when to stay inside.",
+            "Morg catalogs severe acoustic resonance from the clouds. Loud. Unnecessary.",
+        ],
+        "rain": [
+            "Morg notes the downpour. Water level rising. Precipitative efficiency is high.",
+            "Morg watches droplets collide. Hydrodynamic complexity in action.",
+            "Morg states: Atmospheric humidity has reached 100% liquid phase.",
+        ],
+        "sunny": [
+            "Morg squinting at the solar radiation. Unnecessary lux. Morg prefers shadows.",
+            "Morg calculates solar angle. High efficiency. Uncomfortable temperature.",
+            "Morg notes clear sightlines. Too much visibility. Morg remains watchful.",
+        ],
+        "cloud": [
+            "Morg states: Cumulus formations block the primary star. Muted visibility.",
+            "Morg notes atmospheric pressure holds steady under grey shields.",
+            "Morg catalogs the overcast sky. Low light. Ideal for reading.",
+        ],
+        "snow": [
+            "Morg observes frozen precipitation. Solid water crystals descending. Cold.",
+            "Morg notes thermal depletion. Zach should procure thermodynamic heating."
+        ],
+        "fog": [
+            "Morg reports particulate suspension. Air density high. Visibility zero.",
+            "Morg approves of the mist. Ideal cover. No eyes can see Morg."
+        ],
+        "default": [
+            "Morg notes the {weather_description}. Morg finds this unsurprising.",
+            "Morg catalogs the {weather_description}. Another atmospheric state recorded.",
+            "Morg keeps the ledger. {weather_description} is recorded. The balance remains.",
+        ]
     }
 
     def __init__(self, ollama_url: Optional[str] = None) -> None:
@@ -76,14 +112,25 @@ class MorgAdapter:
             return response.json()["response"].strip()
             
         except Exception as e:
-            logger.error(f"Morg LLM error: {e}")
+            logger.debug(f"Morg LLM unreachable, using dynamic fallback: {e}")
+            
+            # 1. Check Alert Status first
             alert_lower = alert_status.lower()
-            for key, commentary in self.FALLBACK_COMMENTARIES.items():
-                if key in alert_lower:
-                    return commentary
-            return self.FALLBACK_COMMENTARIES["default"].format(
-                weather_description=weather_desc
-            )
+            if "tornado" in alert_lower:
+                return random.choice(self.FALLBACK_COMMENTARIES["tornado"])
+            elif "thunder" in alert_lower or "storm" in alert_lower:
+                return random.choice(self.FALLBACK_COMMENTARIES["storm"])
+            
+            # 2. Check Weather Description
+            weather_lower = weather_desc.lower()
+            for key, commentaries in self.FALLBACK_COMMENTARIES.items():
+                if key in weather_lower:
+                    selected = random.choice(commentaries)
+                    return selected.format(weather_description=weather_desc)
+            
+            # 3. Fallback to default
+            selected_default = random.choice(self.FALLBACK_COMMENTARIES["default"])
+            return selected_default.format(weather_description=weather_desc)
 
     async def close(self) -> None:
         """Close resources."""
