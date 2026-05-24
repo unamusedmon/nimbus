@@ -197,6 +197,36 @@ Footer > .footer--highlight {
     color: #e8e4f0;
 }
 
+/* Navigation View Classes */
+.panel-hidden {
+    display: none;
+}
+
+.panel-wide {
+    width: 72%;
+}
+
+.panel-full {
+    width: 100%;
+}
+
+.panel-details-left {
+    width: 35%;
+}
+
+.panel-details-center {
+    width: 65%;
+}
+
+#view-indicator {
+    dock: bottom;
+    text-align: center;
+    color: #9b97aa;
+    height: 1;
+    margin-bottom: 1;
+    text-style: bold;
+}
+
 /* Alert States */
 .alert-active #left-panel, .alert-active #center-panel, .alert-active #right-panel {
     border: round #ff8c42;

@@ -6,11 +6,13 @@ A beautiful Textual TUI weather app with Zahra and Morg.
 
 import asyncio
 from datetime import datetime
+from enum import Enum
 import logging
 
 from textual.app import App, ComposeResult
 from textual.binding import Binding
 from textual.containers import Container, Vertical
+from textual.reactive import reactive
 from textual.widgets import Header, Footer, Static
 
 from nimbus.config import get_config
@@ -26,15 +28,32 @@ from nimbus.widgets.companion import Companion
 logger = logging.getLogger(__name__)
 
 
+class ViewMode(str, Enum):
+    """Available application layout views."""
+    CURRENT = "CURRENT"
+    HOURLY = "HOURLY"
+    DAILY = "DAILY"
+    DETAILS = "DETAILS"
+    COMPANION = "COMPANION"
+
+
 class Nimbus(App):
-    """Nimbus Textual application."""
+    """Nimbus Textual application with a multi-view navigation layer."""
 
     CSS = TCSS
     BINDINGS = [
         Binding("ctrl+t", "simulate_tornado", "Simulate Tornado"),
         Binding("ctrl+r", "refresh_data", "Refresh Data"),
         Binding("q", "safe_quit", "Quit"),
+        Binding("1", "switch_view('CURRENT')", "Current View", show=False),
+        Binding("2", "switch_view('HOURLY')", "Hourly View", show=False),
+        Binding("3", "switch_view('DAILY')", "Daily View", show=False),
+        Binding("4", "switch_view('DETAILS')", "Details View", show=False),
+        Binding("5", "switch_view('COMPANION')", "Companion View", show=False),
     ]
+
+    # Reactive view state
+    current_view = reactive(ViewMode.CURRENT)
 
     def __init__(self) -> None:
         """Initialize the Nimbus application."""
@@ -52,11 +71,15 @@ class Nimbus(App):
         self.simulated_alert: str | None = None
 
     def compose(self) -> ComposeResult:
-        """Compose the application UI panels with native Header and Footer."""
+        """Compose the application UI panels with native Header, Footer, and View Indicator."""
         yield Header(show_clock=True)
         yield Container(
             Vertical(Conditions(id="conditions"), id="left-panel"),
-            Vertical(Sky(id="sky"), id="center-panel"),
+            Vertical(
+                Sky(id="sky"),
+                Static("[ current ]", id="view-indicator"),
+                id="center-panel"
+            ),
             Vertical(Companion(id="companion"), id="right-panel"),
             id="main-container"
         )
@@ -93,6 +116,56 @@ class Nimbus(App):
     def update_time(self) -> None:
         """Update the ticking clock display and trigger clean sky re-rendering."""
         self.query_one("#sky").refresh()
+
+    def action_switch_view(self, view: str) -> None:
+        """Switch the current view mode."""
+        try:
+            self.current_view = ViewMode(view)
+        except ValueError:
+            logger.error(f"Invalid view mode requested: {view}")
+
+    def watch_current_view(self, new_view: ViewMode) -> None:
+        """Trigger updates and adjust panel layouts when the view mode shifts."""
+        try:
+            left = self.query_one("#left-panel")
+            center = self.query_one("#center-panel")
+            right = self.query_one("#right-panel")
+        except Exception:
+            # Catch initialization queries before widgets are mounted/yielded
+            return
+
+        # 1. Reset all layout classes
+        for panel in (left, center, right):
+            panel.remove_class("panel-hidden")
+            panel.remove_class("panel-wide")
+            panel.remove_class("panel-full")
+            panel.remove_class("panel-details-left")
+            panel.remove_class("panel-details-center")
+
+        # 2. Add classes based on new_view
+        if new_view == ViewMode.CURRENT:
+            pass  # Standard width limits apply from CSS defaults
+        elif new_view == ViewMode.HOURLY or new_view == ViewMode.DAILY:
+            left.add_class("panel-hidden")
+            center.add_class("panel-wide")
+        elif new_view == ViewMode.DETAILS:
+            left.add_class("panel-details-left")
+            center.add_class("panel-details-center")
+            right.add_class("panel-hidden")
+        elif new_view == ViewMode.COMPANION:
+            left.add_class("panel-hidden")
+            center.add_class("panel-hidden")
+            right.add_class("panel-full")
+
+        # 3. Update the view indicator
+        try:
+            indicator = self.query_one("#view-indicator", Static)
+            indicator.update(f"[ {new_view.name.lower()} ]")
+        except Exception:
+            pass
+
+        # 4. Trigger personality update hook in parallel
+        asyncio.create_task(self.personality_update(f"view:{new_view.name.lower()}"))
 
     async def action_refresh_data(self) -> None:
         """Force refresh all real-time data."""
