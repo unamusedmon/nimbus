@@ -1,6 +1,8 @@
+README.md
 pyproject.toml
 nimbus/__init__.py
 nimbus/alerts.py
+nimbus/config.py
 nimbus/main.py
 nimbus/morg.py
 nimbus/theme.py
@@ -16,3 +18,6 @@ nimbus/widgets/__init__.py
 nimbus/widgets/companion.py
 nimbus/widgets/conditions.py
 nimbus/widgets/sky.py
+tests/test_adapters.py
+tests/test_alerts.py
+tests/test_weather.py

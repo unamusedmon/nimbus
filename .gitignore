@@ -1,0 +1,17 @@
+# Third-party / external references
+references/
+
+# Python caching & builds
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Local data directories
+zahra_data/
+.env
+.env.local

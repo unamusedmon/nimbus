@@ -16,3 +16,7 @@ build-backend = "setuptools.build_meta"
 
 [project.scripts]
 nimbus = "nimbus.main:run"
+
+[tool.setuptools]
+packages = ["nimbus", "nimbus.widgets"]
+
