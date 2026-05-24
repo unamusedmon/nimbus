@@ -45,11 +45,11 @@ class Nimbus(App):
         Binding("ctrl+t", "simulate_tornado", "Simulate Tornado"),
         Binding("ctrl+r", "refresh_data", "Refresh Data"),
         Binding("q", "safe_quit", "Quit"),
-        Binding("1", "switch_view('CURRENT')", "Current View", show=False),
-        Binding("2", "switch_view('HOURLY')", "Hourly View", show=False),
-        Binding("3", "switch_view('DAILY')", "Daily View", show=False),
-        Binding("4", "switch_view('DETAILS')", "Details View", show=False),
-        Binding("5", "switch_view('COMPANION')", "Companion View", show=False),
+        Binding("1", "switch_view('CURRENT')", "Current View"),
+        Binding("2", "switch_view('HOURLY')", "Hourly View"),
+        Binding("3", "switch_view('DAILY')", "Daily View"),
+        Binding("4", "switch_view('DETAILS')", "Details View"),
+        Binding("5", "switch_view('COMPANION')", "Companion View"),
     ]
 
     # Reactive view state

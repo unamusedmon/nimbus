@@ -199,23 +199,23 @@ Footer > .footer--highlight {
 
 /* Navigation View Classes */
 .panel-hidden {
-    display: none;
+    display: none !important;
 }
 
 .panel-wide {
-    width: 72%;
+    width: 72% !important;
 }
 
 .panel-full {
-    width: 100%;
+    width: 100% !important;
 }
 
 .panel-details-left {
-    width: 35%;
+    width: 35% !important;
 }
 
 .panel-details-center {
-    width: 65%;
+    width: 65% !important;
 }
 
 #view-indicator {
