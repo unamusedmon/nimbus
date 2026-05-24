@@ -197,25 +197,57 @@ Footer > .footer--highlight {
     color: #e8e4f0;
 }
 
+/* Morg Widget Styles */
+.morg-widget-header {
+    text-align: center;
+    text-style: bold;
+    color: #d4a853;
+    margin-bottom: 1;
+}
+
+.morg-ascii {
+    color: #d4a853;
+    text-align: center;
+}
+
+.morg-mood-dot {
+    text-align: center;
+    color: #d4a853;
+    margin-bottom: 1;
+}
+
+.morg-text {
+    color: #d4a853;
+    text-style: italic;
+    padding: 0 2;
+}
+
+.morg-timestamp {
+    dock: bottom;
+    text-align: center;
+    color: #9b97aa;
+    margin-bottom: 1;
+}
+
 /* Navigation View Classes */
 .panel-hidden {
-    display: none !important;
+    display: none;
 }
 
 .panel-wide {
-    width: 72% !important;
+    width: 72%;
 }
 
 .panel-full {
-    width: 100% !important;
+    width: 100%;
 }
 
 .panel-details-left {
-    width: 35% !important;
+    width: 35%;
 }
 
 .panel-details-center {
-    width: 65% !important;
+    width: 65%;
 }
 
 #view-indicator {
